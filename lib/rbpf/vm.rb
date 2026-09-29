@@ -21,6 +21,7 @@ module Rbpf
           when Op::LD, Op::LDX then load(insn)
           when Op::ST then @m[insn.k] = @a
           when Op::STX then @m[insn.k] = @x
+          when Op::ALU then alu(insn)
           when Op::RET then throw :ret, ret_value(insn)
           when Op::MISC then insn.code == (Op::MISC | Op::TAX) ? @x = @a : @a = @x
           end
@@ -48,6 +49,24 @@ module Rbpf
       fmt, len = SIZES.fetch(size)
       throw :ret, 0 if offset + len > @pkt.bytesize
       @pkt.byteslice(offset, len).unpack1(fmt)
+    end
+
+    def alu(insn)
+      src = (insn.code & Op::X) == Op::X ? @x : insn.k
+      result = case insn.code & 0xf0
+               when Op::ADD then @a + src
+               when Op::SUB then @a - src
+               when Op::MUL then @a * src
+               when Op::DIV then (throw :ret, 0 if src == 0; @a / src)
+               when Op::MOD then (throw :ret, 0 if src == 0; @a % src)
+               when Op::OR then @a | src
+               when Op::AND then @a & src
+               when Op::XOR then @a ^ src
+               when Op::LSH then src >= 32 ? 0 : @a << src
+               when Op::RSH then src >= 32 ? 0 : @a >> src
+               when Op::NEG then -@a
+               end
+      @a = result & MASK
     end
 
     def ret_value(insn)
