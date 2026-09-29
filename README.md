@@ -26,6 +26,7 @@ Rbpf.run(prog, packet)  # => 受理する長さ (0 なら破棄)
 
 - 命令は `Rbpf::Insn` でも `[code, jt, jf, k]` の配列でも渡せます
 - `packet` はバイナリ文字列です
+- 大量のパケットに同じプログラムを使うなら `program = Rbpf.compile(prog)` で1回だけ検査して、`program.run(packet)` を繰り返します。`Rbpf.run` は毎回この検査をやり直します
 - 実行前に verifier が検査し、不正なら `Rbpf::InvalidProgram` を投げます (`Rbpf.verify!` で検査だけもできます)
 - パケット範囲外の読み出しと `X=0` の `div/mod` は、例外にせず返り値 0 で終了します (カーネルと同じ)
 

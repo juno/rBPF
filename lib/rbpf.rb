@@ -1,6 +1,7 @@
 require_relative "rbpf/opcode"
 require_relative "rbpf/verifier"
 require_relative "rbpf/vm"
+require_relative "rbpf/program"
 
 module Rbpf
   Insn = Struct.new(:code, :jt, :jf, :k) do
@@ -19,9 +20,11 @@ module Rbpf
     Verifier.verify!(normalize(prog))
   end
 
+  def self.compile(prog)
+    Program.new(prog)
+  end
+
   def self.run(prog, packet)
-    prog = normalize(prog)
-    Verifier.verify!(prog)
-    VM.new(prog, packet).run
+    compile(prog).run(packet)
   end
 end

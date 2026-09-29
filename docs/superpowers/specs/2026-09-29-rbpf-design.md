@@ -14,6 +14,7 @@ eBPFは対象外。TDDで進める。
 
 - `lib/rbpf.rb`: 公開API
   - `Rbpf.run(prog, packet)` → Integer(受理する長さ。0なら破棄)
+  - `Rbpf.compile(prog)` → `Rbpf::Program`(verify 済みの命令のコピーを凍結して持つ。`#run(packet)` を繰り返し呼べる)。`Rbpf.run` は `compile(prog).run(packet)`
   - `Rbpf.verify!(prog)` → 不正なら `Rbpf::InvalidProgram`
 - `lib/rbpf/opcode.rb`: `linux/filter.h` と同じ数値の定数
 - `lib/rbpf/verifier.rb`: 実行前検査

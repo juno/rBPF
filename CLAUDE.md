@@ -12,7 +12,7 @@ Linux の classic BPF (cBPF) を Ruby で書いた学習用シミュレーター
 
 ## アーキテクチャ
 
-`Rbpf.run(prog, packet)` は `normalize` → `Verifier.verify!` → `VM#run` の順に処理する。
+`Rbpf.run(prog, packet)` は `Rbpf.compile(prog)`(`normalize` → `Verifier.verify!` → 命令のコピーを凍結)で作った `Program` に `#run(packet)` を呼ぶだけ。繰り返し使うなら `compile` の結果を持つ。
 
 - `lib/rbpf/opcode.rb`: `linux/filter.h` と同じ数値の `Rbpf::Op`。**オペコードの数値を変えるときは `test/opcode_test.rb` の tcpdump 由来の値と照合する**(過去に `ret a` の値を誤った: 正しくは `RET|RET_A` = 0x16。Linux に `ret x` はない)
 - `lib/rbpf/verifier.rb`: Linux の `bpf_check_classic` と `check_load_and_stores` を Ruby で再現している。許可するオペコードは `*_CODES` の表で持つ。不正な値は必ず `InvalidProgram` にする(負の `jt/jf/k` などがすり抜けると VM が無限ループする)
