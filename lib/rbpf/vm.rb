@@ -22,6 +22,7 @@ module Rbpf
           when Op::ST then @m[insn.k] = @a
           when Op::STX then @m[insn.k] = @x
           when Op::ALU then alu(insn)
+          when Op::JMP then pc = jump(insn, pc)
           when Op::RET then throw :ret, ret_value(insn)
           when Op::MISC then insn.code == (Op::MISC | Op::TAX) ? @x = @a : @a = @x
           end
@@ -67,6 +68,20 @@ module Rbpf
                when Op::NEG then -@a
                end
       @a = result & MASK
+    end
+
+    def jump(insn, pc)
+      op = insn.code & 0xf0
+      return pc + insn.k if op == Op::JA
+
+      src = (insn.code & Op::X) == Op::X ? @x : insn.k
+      taken = case op
+              when Op::JEQ then @a == src
+              when Op::JGT then @a > src
+              when Op::JGE then @a >= src
+              when Op::JSET then (@a & src) != 0
+              end
+      pc + (taken ? insn.jt : insn.jf)
     end
 
     def ret_value(insn)
