@@ -63,8 +63,8 @@ module Rbpf
                when Op::OR then @a | src
                when Op::AND then @a & src
                when Op::XOR then @a ^ src
-               when Op::LSH then src >= 32 ? 0 : @a << src
-               when Op::RSH then src >= 32 ? 0 : @a >> src
+               when Op::LSH then @a << (src & 31)
+               when Op::RSH then @a >> (src & 31)  # K は verifier が k < 32 を保証
                when Op::NEG then -@a
                end
       @a = result & MASK

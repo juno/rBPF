@@ -39,7 +39,7 @@ eBPFは対象外。TDDで進める。
 ## verifier
 
 検査項目: 空プログラム、命令数4096超、未知opcode、範囲外ジャンプ、最終命令が `ret` でない、
-フィールドの型と値域(code 0..0xFFFF、jt/jf 0..255、k 0..0xFFFFFFFF、整数)、`k=0` の `div/mod`、`M` の範囲外(`st/stx/ld mem/ldx mem`)。
+フィールドの型と値域(code 0..0xFFFF、jt/jf 0..255、k 0..0xFFFFFFFF、整数)、`k=0` の `div/mod`、`M` の範囲外(`st/stx/ld mem/ldx mem`)、定数シフトの `k >= 32`、書き込み前のscratch読み出し(全経路で書き込み済みでなければ拒否。`net/core/filter.c` の `check_load_and_stores` と同じ方式)。
 
 ## 対象外(後回し)
 
@@ -48,7 +48,7 @@ eBPFは対象外。TDDで進める。
 
 ## 未確定(仮置き)
 
-- `lsh/rsh` のシフト量が32以上のときは結果0とする。カーネルの挙動が違えば修正する
+- (解決済み) シフト量: K版は `k >= 32` を verifier が拒否、X版は実行時に `X & 31`(`net/core/filter.c` と `kernel/bpf/core.c` で確認)
 - テスト名は英語
 
 ## テスト方針

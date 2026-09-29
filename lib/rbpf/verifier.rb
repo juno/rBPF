@@ -26,6 +26,7 @@ module Rbpf
       bad(nil, "empty program") if prog.empty?
       bad(nil, "program too long") if prog.size > MAX_INSNS
       prog.each_with_index { |insn, pc| check(insn, pc, prog.size) }
+      check_load_and_stores(prog)
       bad(prog.size - 1, "last instruction must be ret") unless prog.last.code & 0x07 == Op::RET
       nil
     end
@@ -38,6 +39,8 @@ module Rbpf
         bad(pc, "scratch index out of range") unless insn.k < MEMWORDS
       when Op::ALU | Op::DIV | Op::K, Op::ALU | Op::MOD | Op::K
         bad(pc, "division by zero") if insn.k == 0
+      when Op::ALU | Op::LSH | Op::K, Op::ALU | Op::RSH | Op::K
+        bad(pc, "shift count must be < 32") unless insn.k < 32
       when Op::JMP | Op::JA
         bad(pc, "jump out of range") unless pc + 1 + insn.k < n
       when *JMP_COND_CODES
@@ -46,6 +49,29 @@ module Rbpf
         nil
       else
         bad(pc, "unknown opcode 0x#{code.to_s(16)}")
+      end
+    end
+
+    # 全経路で書き込み済みのscratchセルだけ読めるようにする(net/core/filter.c の同名関数と同じ方式)。
+    # masks[pc] は pc に合流する経路すべてで書き込み済みのセル(bit)
+    def self.check_load_and_stores(prog)
+      masks = Array.new(prog.size, 0xFFFF)
+      valid = 0
+      prog.each_with_index do |insn, pc|
+        valid &= masks[pc]
+        case insn.code
+        when Op::ST, Op::STX
+          valid |= 1 << insn.k
+        when Op::LD | Op::W | Op::MEM, Op::LDX | Op::W | Op::MEM
+          bad(pc, "read of uninitialized scratch M[#{insn.k}]") if valid[insn.k] == 0
+        when Op::JMP | Op::JA
+          masks[pc + 1 + insn.k] &= valid
+          valid = 0xFFFF
+        when *JMP_COND_CODES
+          masks[pc + 1 + insn.jt] &= valid
+          masks[pc + 1 + insn.jf] &= valid
+          valid = 0xFFFF
+        end
       end
     end
 
