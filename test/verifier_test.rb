@@ -68,4 +68,36 @@ class VerifierTest < Minitest::Test
   def test_rejects_ret_with_invalid_source
     invalid([ins(Op::RET | 0x08)])
   end
+
+  def test_rejects_ret_x_which_linux_does_not_have
+    invalid([ins(Op::RET | 0x08)])  # 0x0e
+    invalid([ins(Op::RET | 0x18)])  # 0x1e
+    assert_nil Rbpf.verify!([ins(Op::RET | Op::RET_A)])
+  end
+
+  def test_rejects_negative_jump_offsets
+    invalid([ins(Op::JMP | Op::JEQ | Op::K, 0, -1, -1), ret_k(0)])
+    invalid([ins(Op::JMP | Op::JA, -1), ret_k(0)])
+  end
+
+  def test_rejects_negative_k
+    invalid([ins(Op::LD | Op::B | Op::ABS, -1), ret_a])
+    invalid([ins(Op::ST, -1), ret_k(0)])
+    invalid([ins(Op::LD | Op::W | Op::MEM, -17), ret_a])
+  end
+
+  def test_rejects_out_of_range_fields
+    invalid([ins(Op::RET | Op::RET_K, 2**32)])                       # k > u32
+    invalid([ins(Op::LD | Op::IMM, 2**33), ret_a])
+    invalid([ins(Op::JMP | Op::JEQ | Op::K, 0, 256, 0), ret_k(0)])   # jt > u8
+    invalid([ins(Op::JMP | Op::JEQ | Op::K, 0, 0, 256), ret_k(0)])   # jf > u8
+    invalid([ins(0x10000), ret_k(0)])                                # code > u16
+    assert_nil Rbpf.verify!([ins(Op::RET | Op::RET_K, 0xFFFFFFFF)])
+  end
+
+  def test_rejects_non_integer_fields
+    invalid([ins(Op::ST, nil), ret_k(0)])
+    invalid([ins(nil), ret_k(0)])
+    invalid([ins(Op::RET | Op::RET_K, 1.5)])
+  end
 end

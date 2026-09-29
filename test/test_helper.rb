@@ -11,7 +11,6 @@ module TestHelper
 
   def ret_k(k) = ins(Op::RET | Op::RET_K, k)
   def ret_a = ins(Op::RET | Op::RET_A)
-  def ret_x = ins(Op::RET | Op::RET_X)
 end
 
 Minitest::Test.include TestHelper

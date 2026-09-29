@@ -23,8 +23,8 @@ class VmTest < Minitest::Test
     assert_equal 5, run_bpf([ins(Op::LD | Op::IMM, 5), ret_a])
   end
 
-  def test_ldx_imm_and_ret_x
-    assert_equal 9, run_bpf([ins(Op::LDX | Op::W | Op::IMM, 9), ret_x])
+  def test_ldx_imm_then_txa
+    assert_equal 9, run_bpf([ins(Op::LDX | Op::W | Op::IMM, 9), ins(Op::MISC | Op::TXA), ret_a])
   end
 
   def test_ld_abs_is_big_endian
@@ -54,12 +54,12 @@ class VmTest < Minitest::Test
 
   def test_ld_len_and_ldx_len
     assert_equal 5, run_bpf([ins(Op::LD | Op::W | Op::LEN), ret_a], PKT)
-    assert_equal 5, run_bpf([ins(Op::LDX | Op::W | Op::LEN), ret_x], PKT)
+    assert_equal 5, run_bpf([ins(Op::LDX | Op::W | Op::LEN), ins(Op::MISC | Op::TXA), ret_a], PKT)
     assert_equal 0, run_bpf([ins(Op::LD | Op::W | Op::LEN), ret_a], "")
   end
 
   def test_ldx_msh
-    assert_equal 20, run_bpf([ins(Op::LDX | Op::B | Op::MSH, 0), ret_x], "\x45".b)
+    assert_equal 20, run_bpf([ins(Op::LDX | Op::B | Op::MSH, 0), ins(Op::MISC | Op::TXA), ret_a], "\x45".b)
   end
 
   def test_st_and_ld_mem
@@ -70,12 +70,21 @@ class VmTest < Minitest::Test
 
   def test_stx_and_ldx_mem
     prog = [ins(Op::LDX | Op::W | Op::IMM, 7), ins(Op::STX, 1), ins(Op::LDX | Op::W | Op::IMM, 0),
-            ins(Op::LDX | Op::W | Op::MEM, 1), ret_x]
+            ins(Op::LDX | Op::W | Op::MEM, 1), ins(Op::MISC | Op::TXA), ret_a]
     assert_equal 7, run_bpf(prog)
   end
 
   def test_tax_and_txa
-    assert_equal 3, run_bpf([ins(Op::LD | Op::IMM, 3), ins(Op::MISC | Op::TAX), ret_x])
+    assert_equal 3, run_bpf([ins(Op::LD | Op::IMM, 3), ins(Op::MISC | Op::TAX), ins(Op::MISC | Op::TXA), ret_a])
     assert_equal 4, run_bpf([ins(Op::LDX | Op::W | Op::IMM, 4), ins(Op::MISC | Op::TXA), ret_a])
+  end
+
+  def test_ret_a_returns_a_not_x
+    prog = [ins(Op::LD | Op::IMM, 5), ins(Op::LDX | Op::W | Op::IMM, 9), ret_a]
+    assert_equal 5, run_bpf(prog)
+  end
+
+  def test_vm_is_not_public
+    assert_raises(NameError) { Rbpf::VM }
   end
 end

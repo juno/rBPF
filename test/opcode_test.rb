@@ -14,8 +14,7 @@ class OpcodeTest < Minitest::Test
     assert_equal 0x84, Op::ALU | Op::NEG          # neg
     assert_equal 0x94, Op::ALU | Op::MOD          # mod
     assert_equal 0x06, Op::RET | Op::RET_K        # ret #k
-    assert_equal 0x16, Op::RET | Op::RET_X        # ret x
-    assert_equal 0x1e, Op::RET | Op::RET_A        # ret a
+    assert_equal 0x16, Op::RET | Op::RET_A        # ret a
     assert_equal 0x07, Op::MISC | Op::TAX         # tax
     assert_equal 0x87, Op::MISC | Op::TXA         # txa
   end
