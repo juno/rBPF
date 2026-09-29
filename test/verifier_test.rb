@@ -100,4 +100,41 @@ class VerifierTest < Minitest::Test
     invalid([ins(nil), ret_k(0)])
     invalid([ins(Op::RET | Op::RET_K, 1.5)])
   end
+
+  def test_rejects_constant_shift_of_32_or_more
+    [Op::LSH, Op::RSH].each do |op|
+      assert_nil Rbpf.verify!([ins(Op::ALU | op | Op::K, 31), ret_a])
+      invalid([ins(Op::ALU | op | Op::K, 32), ret_a])
+    end
+    assert_nil Rbpf.verify!([ins(Op::ALU | Op::LSH | Op::X), ret_a])  # X は実行時にマスク
+  end
+
+  def test_rejects_load_from_uninitialized_scratch
+    invalid([ins(Op::LD | Op::W | Op::MEM, 0), ret_a])
+    invalid([ins(Op::LDX | Op::W | Op::MEM, 3), ret_a])
+    invalid([ins(Op::ST, 1), ins(Op::LD | Op::W | Op::MEM, 0), ret_a])  # 別のセル
+  end
+
+  def test_accepts_load_after_store
+    assert_nil Rbpf.verify!([ins(Op::ST, 0), ins(Op::LD | Op::W | Op::MEM, 0), ret_a])
+    assert_nil Rbpf.verify!([ins(Op::STX, 2), ins(Op::LDX | Op::W | Op::MEM, 2), ret_a])
+  end
+
+  def test_rejects_load_when_only_one_branch_stored
+    prog = [ins(Op::JMP | Op::JEQ | Op::K, 0, 0, 1),  # 0: true -> 1, false -> 2
+            ins(Op::ST, 0),                            # 1
+            ins(Op::LD | Op::W | Op::MEM, 0),          # 2: false 経路は未書き込み
+            ret_a]
+    invalid(prog)
+  end
+
+  def test_accepts_load_when_all_branches_stored
+    prog = [ins(Op::JMP | Op::JEQ | Op::K, 0, 0, 2),  # 0: true -> 1, false -> 3
+            ins(Op::ST, 0),                            # 1
+            ins(Op::JMP | Op::JA, 1),                  # 2: -> 4
+            ins(Op::ST, 0),                            # 3
+            ins(Op::LD | Op::W | Op::MEM, 0),          # 4
+            ret_a]
+    assert_nil Rbpf.verify!(prog)
+  end
 end

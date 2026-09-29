@@ -63,10 +63,12 @@ class AluTest < Minitest::Test
     assert_equal 0xFFFFFFFE, alu_k(Op::LSH, 0xFFFFFFFF, 1)
   end
 
-  def test_shift_by_32_or_more_is_zero
-    assert_equal 0, alu_k(Op::LSH, 1, 32)
-    assert_equal 0, alu_k(Op::RSH, 0xFFFFFFFF, 32)
-    assert_equal 0, alu_x(Op::LSH, 1, 33)
+  # Linux: X 版は実行時に X & 31 でマスクする(K 版の k >= 32 は verifier が拒否)
+  def test_shift_by_x_is_masked_to_5_bits
+    assert_equal 2, alu_x(Op::LSH, 1, 33)
+    assert_equal 1, alu_x(Op::LSH, 1, 32)
+    assert_equal 0xFFFFFFFF, alu_x(Op::RSH, 0xFFFFFFFF, 32)
+    assert_equal 0x7FFFFFFF, alu_x(Op::RSH, 0xFFFFFFFF, 33)
   end
 
   def test_neg
