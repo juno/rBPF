@@ -9,6 +9,8 @@ module Rbpf
     end
   end
 
+  private_constant :VM
+
   def self.normalize(prog)
     prog.map { |insn| insn.is_a?(Insn) ? insn : Insn.new(*insn) }
   end

@@ -32,14 +32,14 @@ eBPFは対象外。TDDで進める。
 - `st/stx`: `M[k]` への書き込み
 - ALU: `add sub mul div mod and or xor lsh rsh neg`。オペランドは K か X
 - JMP: `ja` は `pc += k`。`jeq/jgt/jge/jset` は `jt/jf` の相対ジャンプ
-- RET: K, A, X のいずれか
+- RET: K か A(`ret #k` / `ret a`。Linuxに `ret x` はない。`BPF_A` は 0x10 なので `ret a` = 0x16)
 - MISC: `tax`, `txa`
 - 範囲外のパケット読み出し、X=0 の `div/mod` は例外にせず返り値0で終了する(カーネル準拠)
 
 ## verifier
 
 検査項目: 空プログラム、命令数4096超、未知opcode、範囲外ジャンプ、最終命令が `ret` でない、
-`k=0` の `div/mod`、`M` の範囲外(`st/stx/ld mem/ldx mem`)。
+フィールドの型と値域(code 0..0xFFFF、jt/jf 0..255、k 0..0xFFFFFFFF、整数)、`k=0` の `div/mod`、`M` の範囲外(`st/stx/ld mem/ldx mem`)。
 
 ## 対象外(後回し)
 

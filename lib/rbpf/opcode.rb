@@ -16,7 +16,7 @@ module Rbpf
     # jmp op
     JA = 0x00; JEQ = 0x10; JGT = 0x20; JGE = 0x30; JSET = 0x40
     # ret value source
-    RET_K = 0x00; RET_X = 0x10; RET_A = 0x18
+    RET_K = 0x00; RET_A = 0x10
     # misc op
     TAX = 0x00; TXA = 0x80
   end

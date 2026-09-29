@@ -85,11 +85,7 @@ module Rbpf
     end
 
     def ret_value(insn)
-      case insn.code & 0x18
-      when Op::RET_K then insn.k
-      when Op::RET_X then @x
-      else @a
-      end
+      insn.code & 0x18 == Op::RET_K ? insn.k : @a
     end
   end
 end

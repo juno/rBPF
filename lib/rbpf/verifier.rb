@@ -4,6 +4,9 @@ module Rbpf
   module Verifier
     MAX_INSNS = 4096
     MEMWORDS = 16
+    MAX_U8 = 0xFF
+    MAX_U16 = 0xFFFF
+    MAX_U32 = 0xFFFFFFFF
 
     LD_CODES = [Op::W, Op::H, Op::B].product([Op::ABS, Op::IND]).map { |s, m| Op::LD | s | m } +
                [Op::LD | Op::W | Op::IMM, Op::LD | Op::W | Op::LEN, Op::LD | Op::W | Op::MEM]
@@ -14,8 +17,10 @@ module Rbpf
                 .product([Op::K, Op::X]).map { |o, s| Op::ALU | o | s } + [Op::ALU | Op::NEG]
     JMP_COND_CODES = [Op::JEQ, Op::JGT, Op::JGE, Op::JSET]
                      .product([Op::K, Op::X]).map { |o, s| Op::JMP | o | s }
-    RET_CODES = [Op::RET | Op::RET_K, Op::RET | Op::RET_X, Op::RET | Op::RET_A]
+    RET_CODES = [Op::RET | Op::RET_K, Op::RET | Op::RET_A]
     MISC_CODES = [Op::MISC | Op::TAX, Op::MISC | Op::TXA]
+
+    OTHER_CODES = (LD_CODES + LDX_CODES + ALU_CODES + RET_CODES + MISC_CODES).freeze
 
     def self.verify!(prog)
       bad(nil, "empty program") if prog.empty?
@@ -26,6 +31,7 @@ module Rbpf
     end
 
     def self.check(insn, pc, n)
+      check_fields(insn, pc)
       code = insn.code
       case code
       when Op::LD | Op::W | Op::MEM, Op::LDX | Op::W | Op::MEM, Op::ST, Op::STX
@@ -36,10 +42,18 @@ module Rbpf
         bad(pc, "jump out of range") unless pc + 1 + insn.k < n
       when *JMP_COND_CODES
         bad(pc, "jump out of range") unless pc + 1 + insn.jt < n && pc + 1 + insn.jf < n
-      when *(LD_CODES + LDX_CODES + ALU_CODES + RET_CODES + MISC_CODES)
+      when *OTHER_CODES
         nil
       else
         bad(pc, "unknown opcode 0x#{code.to_s(16)}")
+      end
+    end
+
+    # sock_filter の型: code u16, jt/jf u8, k u32
+    def self.check_fields(insn, pc)
+      { code: MAX_U16, jt: MAX_U8, jf: MAX_U8, k: MAX_U32 }.each do |field, max|
+        v = insn.public_send(field)
+        bad(pc, "#{field} must be an integer in 0..#{max}") unless v.is_a?(Integer) && v.between?(0, max)
       end
     end
 
